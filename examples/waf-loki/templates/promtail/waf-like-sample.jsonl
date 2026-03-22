@@ -1,0 +1,3 @@
+{"timestamp":1735700000000,"action":"ALLOW","terminatingRuleId":"Default_Action","httpRequest":{"clientIp":"8.8.8.8","uri":"/","httpMethod":"GET"}}
+{"timestamp":1735700001000,"action":"ALLOW","terminatingRuleId":"Default_Action","httpRequest":{"clientIp":"1.1.1.1","uri":"/api","httpMethod":"POST"}}
+{"timestamp":1735700002000,"action":"BLOCK","terminatingRuleId":"AWSManagedRulesCommonRuleSet","httpRequest":{"clientIp":"203.0.113.50","uri":"/admin","httpMethod":"GET"}}

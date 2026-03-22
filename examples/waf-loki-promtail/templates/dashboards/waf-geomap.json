@@ -1,0 +1,107 @@
+{
+  "id": null,
+  "title": "WAF geographic (country)",
+  "uid": "waf-geomap",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "geomap",
+      "title": "WAF requests (country centroid)",
+      "description": "Lambda adds geo_lat / geo_lon from httpRequest.country using ISO2 → bounding-box centre (not client IP precision). Grafana uses coordinate mode so the map does not rely on country-code lookup in the panel.",
+      "gridPos": { "h": 14, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false }
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "editorMode": "code",
+          "expr": "{source=\"waf\"} |= \"geo_lat\"",
+          "queryType": "range",
+          "maxLines": 2000,
+          "legendFormat": ""
+        }
+      ],
+      "transformations": [
+        {
+          "id": "extractFields",
+          "options": {
+            "format": "json",
+            "keepTime": false,
+            "replace": false,
+            "source": "Line"
+          }
+        }
+      ],
+      "options": {
+        "basemap": { "config": {}, "name": "Layer 0", "type": "default" },
+        "controls": {
+          "mouseWheelZoom": true,
+          "showAttribution": true,
+          "showDebug": false,
+          "showMeasure": false,
+          "showScale": true,
+          "showZoom": true
+        },
+        "layers": [
+          {
+            "type": "markers",
+            "name": "Country centre",
+            "config": {
+              "showLegend": true,
+              "style": {
+                "color": { "fixed": "semi-dark-blue" },
+                "opacity": 0.85,
+                "shape": "circle",
+                "size": { "fixed": 12, "max": 18, "min": 6 }
+              }
+            },
+            "location": {
+              "mode": "coords",
+              "latitude": "geo_lat",
+              "longitude": "geo_lon"
+            },
+            "tooltip": true,
+            "opacity": 1
+          }
+        ],
+        "tooltip": { "mode": "details" },
+        "view": { "allLayers": true, "id": "zero", "lat": 20, "lon": 0, "zoom": 1.2 }
+      }
+    },
+    {
+      "id": 2,
+      "type": "logs",
+      "title": "WAF lines (with geo when country maps)",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 14 },
+      "datasource": { "type": "loki", "uid": "loki" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "editorMode": "code",
+          "expr": "{source=\"waf\"}",
+          "queryType": "range"
+        }
+      ],
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": true
+      }
+    }
+  ]
+}

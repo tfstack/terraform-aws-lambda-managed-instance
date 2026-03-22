@@ -1,0 +1,33 @@
+# Copy to terraform.tfvars and adjust for your account/region.
+# Use a region where Lambda Managed Instances is available (see repository README).
+# Defaults use 10.0.0.0/16; change if this CIDR is in use in your account.
+
+# aws_region  = "ap-southeast-2"
+# name_prefix = "lmi-waf-loki"
+
+# tags = {
+#   Project = "waf-loki-promtail-walkthrough"
+# }
+
+# Required: name of an existing bucket (this example does not create it).
+# For WAFv2 logging to S3, use a name starting with aws-waf-logs-.
+# waf_logs_bucket_name = "aws-waf-logs-my-demo-123456789012"
+
+# ── WAF ingest ────────────────────────────────────────────────────────────────
+# Scope the S3 event trigger to a specific key prefix (optional).
+# waf_logs_prefix = "AWSLogs/"
+
+# Suffix filter for notifications; default ".gz" matches WAF delivery. Use "" to trigger on any key (careful on shared buckets).
+# waf_logs_object_suffix = ".gz"
+
+# ARN of an existing WAFv2 Web ACL to enable automatic WAF log delivery to S3.
+# Leave empty to upload test objects manually.
+# web_acl_arn = "arn:aws:wafv2:ap-southeast-2:123456789012:regional/webacl/my-acl/..."
+
+# ── Observability ─────────────────────────────────────────────────────────────
+# CIDR blocks allowed to reach the Grafana ALB on port 80.
+# Defaults to your current public IP via checkip.amazonaws.com.
+# alb_ingress_cidrs = ["203.0.113.10/32"]
+
+# EC2 instance type for the Loki + Grafana host (default: t3.small).
+# obs_instance_type = "t3.small"

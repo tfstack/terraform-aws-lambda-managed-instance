@@ -1,0 +1,6 @@
+{
+  "name": "waf-loki-ingest",
+  "version": "1.0.0",
+  "description": "WAF S3 log ingest to Loki push — runs on Lambda Managed Instance (Node.js 24, x86_64)",
+  "type": "module"
+}

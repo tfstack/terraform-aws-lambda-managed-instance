@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars and adjust for your account/region.
+# Use a region where Lambda Managed Instances is available (see README).
+# aws_region = "ap-southeast-2"
+# name_prefix = "lmi-basic"
+
+# tags = {
+#   Project = "lmi-smoke-test"
+# }
