@@ -1,0 +1,141 @@
+#!/bin/bash
+set -euxo pipefail
+
+# ── Install Docker ──────────────────────────────────────────────────────────
+dnf install -y docker
+systemctl enable --now docker
+usermod -aG docker ec2-user
+
+# ── Install Docker Compose v2 plugin ────────────────────────────────────────
+COMPOSE_VERSION="2.33.1"
+mkdir -p /usr/local/lib/docker/cli-plugins
+curl -fsSL "https://github.com/docker/compose/releases/download/v$${COMPOSE_VERSION}/docker-compose-linux-x86_64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+# ── Working directory structure ──────────────────────────────────────────────
+mkdir -p /opt/obs/grafana/provisioning/datasources
+mkdir -p /opt/obs/grafana/provisioning/dashboards
+mkdir -p /opt/obs/grafana/dashboards
+
+# ── Loki config (monolithic, filesystem storage on EBS) ─────────────────────
+cat > /opt/obs/loki-config.yaml << 'LOKI_EOF'
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+common:
+  instance_addr: 127.0.0.1
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+LOKI_EOF
+
+# ── Docker Compose ───────────────────────────────────────────────────────────
+cat > /opt/obs/docker-compose.yaml << 'COMPOSE_EOF'
+services:
+  loki:
+    image: grafana/loki:3.4.2
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki-data:/loki
+      - /opt/obs/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+    command: -config.file=/etc/loki/loki-config.yaml
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3100/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - /opt/obs/grafana/provisioning:/etc/grafana/provisioning:ro
+      - /opt/obs/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      loki:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  loki-data:
+  grafana-data:
+COMPOSE_EOF
+
+# ── Grafana: Loki datasource ─────────────────────────────────────────────────
+cat > /opt/obs/grafana/provisioning/datasources/loki.yaml << 'DS_EOF'
+apiVersion: 1
+datasources:
+  - name: Loki
+    type: loki
+    uid: loki
+    url: http://loki:3100
+    access: proxy
+    isDefault: true
+    jsonData:
+      maxLines: 1000
+DS_EOF
+
+# ── Grafana: dashboard provider ──────────────────────────────────────────────
+cat > /opt/obs/grafana/provisioning/dashboards/provider.yaml << 'PROV_EOF'
+apiVersion: 1
+providers:
+  - name: default
+    orgId: 1
+    folder: WAF
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+PROV_EOF
+
+# ── Grafana dashboards (base64 from Terraform; avoids heredoc / line-ending issues) ──
+printf '%s' "${waf_dashboard_b64}" | base64 -d > /opt/obs/grafana/dashboards/waf.json
+printf '%s' "${waf_overview_b64}" | base64 -d > /opt/obs/grafana/dashboards/waf-overview.json
+chmod a+r /opt/obs/grafana/dashboards/*.json
+python3 - <<'PY'
+import json
+for p in (
+    "/opt/obs/grafana/dashboards/waf.json",
+    "/opt/obs/grafana/dashboards/waf-overview.json",
+):
+    with open(p, encoding="utf-8") as f:
+        json.load(f)
+    print("validated dashboard json:", p)
+PY
+
+# ── Start Compose ────────────────────────────────────────────────────────────
+cd /opt/obs
+docker compose up -d

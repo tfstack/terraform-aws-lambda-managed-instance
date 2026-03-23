@@ -1,0 +1,18 @@
+terraform {
+  required_version = ">= 1.7.0"
+
+  required_providers {
+    archive = {
+      source  = "hashicorp/archive"
+      version = ">= 2.4.0"
+    }
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 6.0.0"
+    }
+    http = {
+      source  = "hashicorp/http"
+      version = ">= 3.4.0"
+    }
+  }
+}

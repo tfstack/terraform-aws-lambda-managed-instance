@@ -1,0 +1,21 @@
+# Caller-managed Lambda zip build outputs
+**/.build/
+
+# Node.js Lambda examples: install deps locally; do not commit node_modules
+examples/**/node_modules/
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
